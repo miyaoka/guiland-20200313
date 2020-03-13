@@ -1,18 +1,28 @@
 <template>
   <div class="calender">
-    <p>date:<DatePicker :date="localDate" @update="onUpdate" /></p>
     <p>
-      cellSize:<input v-model.number="cellWidth" type="number" /><input
-        v-model.number="cellHeight"
-        type="number"
-      />px
+      date:<DatePicker :date="localToday" @update="setDate" />
+      <button @click="setDate(new Date())">today</button>
+    </p>
+    <p>
+      cell w:<input
+        v-model.number="cellWidth"
+        type="range"
+        min="15"
+        max="100"
+      />
+      h:<input v-model.number="cellHeight" type="range" min="15" max="100" />
+      gap:<input v-model.number="cellGap" type="range" min="0" max="30" />
     </p>
     <ul>
       <li
         v-for="date in dateList"
         :key="date.getTime()"
         :style="getStyle(date)"
-        :class="{ isToday: date.getTime() === localDateTime }"
+        :class="{
+          isCurrentMonth: isCurrentMonth(date),
+        }"
+        @click="setDate(date)"
       >
         {{ getDateLabel(date) }}
       </li>
@@ -41,8 +51,10 @@ export default Vue.extend({
     return {
       cellWidth: 60,
       cellHeight: 40,
-      localDate: now,
-      localDateTime: 0,
+      cellGap: 5,
+      localToday: now,
+      localTodayTime: 0,
+      localTodayYYMM: '',
       firstDateOfMonth: now,
       firstDateOfCalendar: now,
     }
@@ -65,7 +77,7 @@ export default Vue.extend({
     today: {
       immediate: true,
       handler(val: Date) {
-        this.onUpdate(val)
+        this.setDate(val)
       },
     },
   },
@@ -76,33 +88,54 @@ export default Vue.extend({
     },
     getStyle(date: Date) {
       const day = date.getDay()
-      const diff = date.getTime() - this.firstDateOfCalendar.getTime()
+      const time = date.getTime()
+      const diff = time - this.firstDateOfCalendar.getTime()
       const weekDiff = Math.floor(diff / weekMs)
-      const x = day * (this.cellWidth + 4)
-      const y = weekDiff * (this.cellHeight + 4)
-      return {
+      const x = day * (this.cellWidth + this.cellGap)
+      const y = weekDiff * (this.cellHeight + this.cellGap)
+
+      const isToday = time === this.localTodayTime
+
+      const style = {
         background: day === 0 ? '#fcc' : day === 6 ? '#ccf' : '#fff',
         width: `${this.cellWidth}px`,
         height: `${this.cellHeight}px`,
         position: 'absolute',
         transform: `translate(${x}px, ${y}px)`,
       }
+      return isToday
+        ? {
+            ...style,
+            transform: `${style.transform} scale(${Math.random() *
+              Math.random() *
+              1.5 +
+              1.1}) rotate(${(Math.random() > 0.5 ? 1 : -1) * 360 +
+              Math.random() * Math.random() * 40}deg)`,
+            'z-index': 1,
+          }
+        : style
     },
-    onUpdate(val: Date) {
+    isCurrentMonth(val: Date) {
+      const yymm = `${val.getFullYear()}/${val.getMonth()}`
+      return this.localTodayYYMM === yymm
+    },
+    setDate(val: Date) {
       const year = val.getFullYear()
       const month = val.getMonth()
       const mday = val.getDate()
 
       const date = new Date(year, month, mday)
 
-      this.localDate = date
-      this.localDateTime = date.getTime()
+      this.localToday = date
+      this.localTodayTime = date.getTime()
+      this.localTodayYYMM = `${year}/${month}`
 
       this.firstDateOfMonth = new Date(year, month, 1)
+      const prevMonth = new Date(year, month - 1, 1)
       this.firstDateOfCalendar = new Date(
         year,
-        month,
-        1 - this.firstDateOfMonth.getDay()
+        month - 1,
+        1 - prevMonth.getDay()
       )
     },
   },
@@ -128,11 +161,13 @@ li {
   padding: 0;
   text-indent: 0;
   list-style-type: none;
-  transition: ease-in 0.2s;
+  transition: transform cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s;
   border-radius: 10%;
-  &.isToday {
-    border: 2px solid #f00;
-    // background: #f00 !important;
+  opacity: 0.5;
+  cursor: pointer;
+  &.isCurrentMonth {
+    opacity: 1;
+    border: 1px solid #ccc;
   }
 }
 </style>
