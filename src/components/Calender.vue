@@ -1,13 +1,20 @@
 <template>
   <div class="calender">
-    <DatePicker :date="localDate" @update="onUpdate" />
+    <p>date:<DatePicker :date="localDate" @update="onUpdate" /></p>
+    <p>
+      cellSize:<input v-model.number="cellWidth" type="number" /><input
+        v-model.number="cellHeight"
+        type="number"
+      />px
+    </p>
     <ul>
       <li
         v-for="date in dateList"
-        :key="date.toString()"
+        :key="date.getTime()"
         :style="getStyle(date)"
+        :class="{ isToday: date.getTime() === localDateTime }"
       >
-        {{ date.getDate() }}
+        {{ getDateLabel(date) }}
       </li>
     </ul>
   </div>
@@ -25,22 +32,23 @@ export default Vue.extend({
   },
   props: {
     today: {
-      type: Date,
+      type: Date as PropType<Date>,
       default: () => new Date(),
     },
   },
   data() {
     const now = new Date()
     return {
-      cellSize: 30,
+      cellWidth: 60,
+      cellHeight: 40,
       localDate: now,
+      localDateTime: 0,
       firstDateOfMonth: now,
       firstDateOfCalendar: now,
     }
   },
   computed: {
     dateList(): Date[] {
-      this.localDate
       const year = this.firstDateOfCalendar.getFullYear()
       const month = this.firstDateOfCalendar.getMonth()
       const mDay = this.firstDateOfCalendar.getDate()
@@ -62,22 +70,33 @@ export default Vue.extend({
     },
   },
   methods: {
+    getDateLabel(date: Date) {
+      const mday = date.getDate()
+      return (mday === 1 ? `${date.getMonth() + 1}/` : '') + `${mday}`
+    },
     getStyle(date: Date) {
       const day = date.getDay()
       const diff = date.getTime() - this.firstDateOfCalendar.getTime()
       const weekDiff = Math.floor(diff / weekMs)
-      const x = day * this.cellSize
-      const y = weekDiff * this.cellSize
+      const x = day * (this.cellWidth + 4)
+      const y = weekDiff * (this.cellHeight + 4)
       return {
+        background: day === 0 ? '#fcc' : day === 6 ? '#ccf' : '#fff',
+        width: `${this.cellWidth}px`,
+        height: `${this.cellHeight}px`,
         position: 'absolute',
         transform: `translate(${x}px, ${y}px)`,
       }
     },
     onUpdate(val: Date) {
-      this.localDate = val
+      const year = val.getFullYear()
+      const month = val.getMonth()
+      const mday = val.getDate()
 
-      const year = this.localDate.getFullYear()
-      const month = this.localDate.getMonth()
+      const date = new Date(year, month, mday)
+
+      this.localDate = date
+      this.localDateTime = date.getTime()
 
       this.firstDateOfMonth = new Date(year, month, 1)
       this.firstDateOfCalendar = new Date(
@@ -86,13 +105,6 @@ export default Vue.extend({
         1 - this.firstDateOfMonth.getDay()
       )
     },
-    // getMDateLength(year: number, monthIndex: number): number {
-    //   const mDateLength = mDateLengthList[monthIndex]
-    //   return (
-    //     mDateLength +
-    //     (monthIndex === 1 && year % 4 === 0 && year % 400 !== 0 ? 1 : 0)
-    //   )
-    // },
   },
 })
 </script>
@@ -109,11 +121,18 @@ ul {
   // border: 1px solid #666;
 }
 li {
+  font-size: 12px;
+  border: 1px solid #eee;
   display: flex;
   margin: 0;
   padding: 0;
   text-indent: 0;
   list-style-type: none;
-  transition: ease-in 0.3s;
+  transition: ease-in 0.2s;
+  border-radius: 10%;
+  &.isToday {
+    border: 2px solid #f00;
+    // background: #f00 !important;
+  }
 }
 </style>
